@@ -1,0 +1,26 @@
+{
+  "name": "lexiparse",
+  "version": "1.0.0",
+  "description": "Combined Lexical Analyzer and Parser for making programming language interpreters or compilers -- but from JavaScript.",
+  "main": "lexiparse.js",
+  "scripts": {
+    "test": "./burp.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Solifugus/lexiparse.git"
+  },
+  "keywords": [
+    "lexer",
+    "parser"
+  ],
+  "author": "Matthew C. Tedder",
+  "license": "GPL-2.0-only",
+  "bugs": {
+    "url": "https://github.com/Solifugus/lexiparse/issues"
+  },
+  "homepage": "https://github.com/Solifugus/lexiparse#readme",
+  "dependencies": {
+    "prompt-sync": "^4.1.6"
+  }
+}
