@@ -5,7 +5,8 @@
 class Lexiparse {
 	constructor( grammar, option ) {
 		this.grammar   = grammar;  // language definition object (see docs)
-		option.caseful = option.caseful === true ? true : false;
+		if( option.caseful !== true )     option.caseful = false;
+		if( option.top === undefined )    option.top = 'stmt';
 		if( option.ignore === undefined ) option.ignore = [' ','\t','\n'];
 		this.option = option;
 	};  // End of constructor()
@@ -18,13 +19,17 @@ class Lexiparse {
 	// Run Program
 	run( program, pos = 0 ) {
 		// Execute each statement in program
+		console.log('PROGRAM BEGAN.');
+		//console.log(program);
 		while( pos < program.length ) {
-			var match = this.matchSegment( program, pos, 'top' );
-			console.log( 'MATCHED STATEMENT: ' + JSON.stringify(match) );
+			//console.log('>> SEEKING NEXT STATEMENT');
+			var match = this.matchOption( program, pos, this.option.top );
+			//console.log( '<< STATEMENT MATCHED AS: ' + JSON.stringify(match) );
 			if( match === false ) {
 				while( this.option.ignore.indexOf(program[pos]) !== -1 ) pos += 1; // skip passed any ignored characters
 				let linePos = this.getLinePos( program, pos );
 				console.error('Syntax Error on line #' + linePos.lineNo + ', position: ' +  linePos.charNo + '.');
+				console.error('\t--> ' + program.substr(pos,linePos.endOfLine));
 				break;
 			}
 			pos = match.posAfter;
@@ -42,12 +47,14 @@ class Lexiparse {
 				lineNo  += 1;
 			}
 		} 
-		return { lineNo:lineNo, charNo:1+pos-linePos };
+		let endOfLine = program.substr(pos).indexOf('\n');
+		if( endOfLine === -1 ) endOfLine = program.length - 1;
+		return { lineNo:lineNo, charNo:1+pos-linePos, endOfLine:endOfLine };
 	}
 
 	// Find and Return Match of Segment (label), Starting at Code Position (pos) 
-	matchSegment( code, pos, label ) {
-		console.log('MATCH SEGMENT "' +  label + '": ' + JSON.stringify(this.grammar[label]));
+	matchOption( code, pos, label, path = [] ) {
+		//console.log('Entered matchOption with path: ' + JSON.stringify(path) + '; Seeking option: ' + JSON.stringify(label));
 		// Default return value (matched nothing)
 		var match = false;
 
@@ -58,18 +65,23 @@ class Lexiparse {
 		if( pos >= code.length ) match = { found:[], posAfter:pos };
 
 		// Get segment from label
-		var segment = this.grammar[label];
-		if( segment === undefined ) throw 'ERROR in Language Definition: segment "' + label + '" is not defined.';
+		var options = this.grammar[label];
+		if( options === undefined ) throw 'ERROR in Language Definition: segment "' + label + '" is not defined.';
 
 		// Search for First Segment Option Matching Current Code Position Else Error
-		for( var i = 0; i < segment.length; i += 1 ) {
-			let option = segment[i];
-			console.log('\tSEEKING OPTION: ' + JSON.stringify(option));
+		for( var i = 0; i < options.length; i += 1 ) { 
+			let option = options[i];
+
+			// Ignore function -- execute only after matching option found (function should in array after last option)
+			if( typeof option === 'function' ) continue;
 
 			// If option is sub-segment (e.g. ':label')
 			if( typeof option === 'string' && option[0] === ':' ) {
-				console.log('\tChecking for sub-segment "' + option.substr(1) + '"');
-				let result = this.matchSegment( code, pos, option.substr(1) );
+				// If not infinite recurse, seek option..
+				if( path.indexOf(i) !== -1 ) { continue; } else { path.push(i); }
+				let result = this.matchOption( code, pos, option.substr(1), path );
+				path.pop();
+				//console.log('RETURNED TO OPTION "' + option + '" with: ' + JSON.stringify(result)); 
 				if( result !== false ) {
 					match = result;
 					break;
@@ -96,7 +108,11 @@ class Lexiparse {
 
 			// if option is sequence 
 			if( Array.isArray( option ) ) {
-				let result = this.matchSequence( code, pos, option );
+				// If not infinite recurse, seek sequence..
+				if( path.indexOf(i) !== -1 ) { continue; } else { path.push(i); }
+				let result = this.matchSequence( code, pos, option, path );
+				path.pop();
+				//console.log( 'RETURNED FROM SEQUENCE TO OPTION with: ' + JSON.stringify(result) ); 
 				if( result !== false ) {
 					match = result;
 					break;
@@ -104,45 +120,75 @@ class Lexiparse {
 			}
 		} // end of loop through segment options
 
+		// If function at end of options, call it.
+		//console.log('CALLING FUNC WITH: ' + JSON.stringify(match)); 
+		if( match !== false && typeof options[options.length-1] === 'function' ) {
+			options[options.length-1]( match );
+		}
+
+		//console.log('\t\tOption Found: ' + JSON.stringify(match));
 		return match;
-	}  // end of matchSegment()
+	}  // end of matchOption()
 
 	// Return Match Results of Ordered Sequence of Items
-	matchSequence( code, pos, sequence ) {
-		console.log('MATCH SEQUENCE: ' + JSON.stringify(sequence));
-		var match   = { found:[], posAfter:pos };
-		var matched = true;
+	matchSequence( code, pos, sequence, path = [] ) {
+		//console.log('Entered matchSequence with path: ' + JSON.stringify(path) + '; Seeking sequence: ' + JSON.stringify(sequence));
+		var match = { type:'sequence', values:[], posAfter:pos };  // Findings holds each match in sequence
 
 		for( var i = 0; i < sequence.length; i += 1 ) {
 			let required = sequence[i];
-			console.log('\tSEEKING "' + required + '" at "' + code.substr(pos,15) + '..');
-			let result   = false;
+
+			// If process function then run (could be multiple in sequence -- is that useful?)
+			if( typeof required === 'function' ) continue;
+
+			// Verify required is there next in order 
+			var result = false;
 
 			// Skip any characters specified to ignore
 			while( this.option.ignore.indexOf(code[pos]) !== -1 ) pos += 1;
+			//console.log('\t\tLooking for required "' + required + '" at ' + JSON.stringify(code.substr(pos,15)) + '..');
 
-			// If required is sub-segment (e.g. ':label')
-			if( typeof required === 'string' && required[0] === ':' ) result = this.matchSegment( code, pos, required.substr(1) );
+			// If required is a sub-segment or literal string (prefix of : for subsegment, unless :: escaped)
+			if( typeof required === 'string' ) {
+				var isSubsegment;
+				if( required[0] === ':' ) {
+					if( required[1] === ':' ) { isSubseqment = false; } else { isSubsegment = true; }
+					required = required.substr(1);
+				}
+				else { isSubsegment = false; }
 
-			// If required is literal
-			if( typeof required === 'string' ) result = this.matchLiteral( code, pos, required );
+				if( isSubsegment === true )  { 
+					result = this.matchOption( code, pos, required, path );
+					//console.log('RETURNED TO REQUIREMENT "' + required + '" with: ' + JSON.stringify(result)); // XXX
+				}
+				if( isSubsegment === false ) result = this.matchLiteral( code, pos, required );
+			}
 
 			// If required is regex
 			if( required instanceof RegExp ) result = this.matchRegex( code, pos, required );
 
 			// Deal with Result of match attempt
 			if( result === false ) {
-				matched = false;
+				match = false;
 				break;
 			}
-			else { 
-				match.found.push.apply( match.found, result.found );
+            else {
+                //match.found.push.apply(match.found, result.found);
+                match.values.push({ type: result.type, value: result.value });
+                //console.log('NOW: ' + JSON.stringify(match));
+
+                //if (result.found !== undefined) match.found.push( result.found );
 				pos = result.posAfter;
 			}
+			//console.log('\t\tFound required "' + required + '": ' + JSON.stringify(match))
 		} // end of loop through sequence
 		
-		if( !matched ) { match = false; }
-		else { match.posAfter = pos; console.log('\tMATCHED WHOLE SEQUENCE'); }
+        if (match !== false) {
+            match.posAfter = pos;
+            let handler = sequence[sequence.length - 1];
+            if (typeof handler === 'function') handler(match);
+        }
+		//console.log('\tFULL SEQUENCE: ' + JSON.stringify(match));
 		return match;
 	} // end of matchSequence()
 
@@ -154,7 +200,9 @@ class Lexiparse {
 			( this.option.caseful === true && literal === code.substr( pos, literal.length ) ) ||
 			( this.option.caseful === false && literal.toLowerCase() === code.substr( pos, literal.length ).toLowerCase() )
 		) {
-			match = { found:[literal], posAfter: pos + literal.length };
+            match = { found: [literal], posAfter: pos + literal.length };
+            match.type = 'keyword';
+            match.value = literal;
 		}
 		return match;
 	} // end of matchLiteral
@@ -163,7 +211,11 @@ class Lexiparse {
 	matchRegex( code, pos, regex ) {
 		var match = false;
 		let result = regex.exec( code.substr(pos) );
-		if( result !== null ) match = { found:result, posAfter: pos + result[0].length };
+        if (result !== null) {
+            match = { found: result, posAfter: pos + result[0].length };
+            match.type = 'regex';
+            match.value = result;
+        }
 		return match; 
 	}
 
