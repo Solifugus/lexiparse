@@ -8,6 +8,9 @@ First you must:
 	* Include and instantiate an instance of the Lexiparse class, passing 
 	  your grammar definition and any non-default options into the constructor.
 
+
+The sample file "burp.js" illustrates with implementation of the "burp" language.
+
 ------------------
 Grammar Definition
 
