@@ -3,13 +3,10 @@
 var Lexiparse = require('./lexiparse.js');
 var prompt = require('prompt-sync')();
 
+
+
 // ===================<< Language Support Functions >>=========================
-
-
-// ======================<< Language Definition >>=============================
-// segment_name: { options:[ string | [sequence array ending with func], func] }
-
-var variable = {};
+var variable = {};  // to hold variables of the "burp" language
 
 function input( detail ) {
 	detail.type  = 'text';
@@ -70,6 +67,9 @@ function strlit( detail ) {
 	//console.log('\t* text literal ' + JSON.stringify(detail));
 }
 
+// ======================<< Language Definition >>=============================
+// segment_name: { options:[ string | [sequence array ending with func], func] }
+
 let grammar = {
 	'stmt':[
 		['output','=',':expr', output],
@@ -91,16 +91,15 @@ let grammar = {
 	'strlit':[/^"([^"]*)"/, strlit ]
 }
 
-// ======================<< Sample Program >>========================
+// ======================<< Sample Burp Program >>========================
 let program = ''
-	        +'output = 15+10+1\n'
-            + 'year = 2018\n'
-	        //+ 'output = "YEAR "\n'
-	        + 'output = year\n'
-	        + 'age = ask "Your age"\n'
-	        + 'born = 2018 - age\n'
-	        //+ 'output = 2018\n'
-	        + 'output = born\n'
+	        +'output = 15+10+1-6\n'                 // output a calculation
+            + 'year = 2018\n'                       // assign number to variable
+	        + 'output = "Birth Year Calculator"\n'  // output some text
+	        + 'output = year\n'                     // output contents of a variable
+	        + 'age = ask "Your age"\n'              // prompt user for input
+	        + 'born = 2018 - age\n'                 // assign from variable and literal
+	        + 'output = born\n'                     // output new variable's value
 	;
 
 var interpreter = new Lexiparse( grammar, { caseful:false, ignore:[' ','\t','\n'] } );

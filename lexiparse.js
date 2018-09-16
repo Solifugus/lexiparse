@@ -125,7 +125,7 @@ class Lexiparse {
 		var match = { type:'sequence', values:[], posAfter:pos };  // Findings holds each match in sequence
 
 		for( var i = 0; i < sequence.length; i += 1 ) {
-			if( i > 0 ) path = [];  // NOTE: crude but effective fix for 1+1+1 issue. Will this work in all cases? 
+			if( i > 0 ) path = [];  // NOTE: crude but effective fix for 1+1+1 issue.
 			let required = sequence[i];
 
 			// If process function then run (could be multiple in sequence -- is that useful?)
