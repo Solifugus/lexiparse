@@ -19,12 +19,8 @@ class Lexiparse {
 	// Run Program
 	run( program, pos = 0 ) {
 		// Execute each statement in program
-		console.log('PROGRAM BEGAN.');
-		//console.log(program);
 		while( pos < program.length ) {
-			//console.log('>> SEEKING NEXT STATEMENT');
 			var match = this.matchOption( program, pos, this.option.top );
-			//console.log( '<< STATEMENT MATCHED AS: ' + JSON.stringify(match) );
 			if( match === false ) {
 				while( this.option.ignore.indexOf(program[pos]) !== -1 ) pos += 1; // skip passed any ignored characters
 				let linePos = this.getLinePos( program, pos );
@@ -34,7 +30,6 @@ class Lexiparse {
 			}
 			pos = match.posAfter;
 		}
-		console.log('PROGRAM FINISHED.');
 	} // end of run()
 
 	// From program character position, return lineNo and charNo (on that last line)
@@ -54,7 +49,6 @@ class Lexiparse {
 
 	// Find and Return Match of Segment (label), Starting at Code Position (pos) 
 	matchOption( code, pos, label, path = [] ) {
-		//console.log('Entered matchOption with path: ' + JSON.stringify(path) + '; Seeking option: ' + JSON.stringify(label));
 		// Default return value (matched nothing)
 		var match = false;
 
@@ -81,7 +75,6 @@ class Lexiparse {
 				if( path.indexOf(i) !== -1 ) { continue; } else { path.push(i); }
 				let result = this.matchOption( code, pos, option.substr(1), path );
 				path.pop();
-				//console.log('RETURNED TO OPTION "' + option + '" with: ' + JSON.stringify(result)); 
 				if( result !== false ) {
 					match = result;
 					break;
@@ -112,7 +105,6 @@ class Lexiparse {
 				if( path.indexOf(i) !== -1 ) { continue; } else { path.push(i); }
 				let result = this.matchSequence( code, pos, option, path );
 				path.pop();
-				//console.log( 'RETURNED FROM SEQUENCE TO OPTION with: ' + JSON.stringify(result) ); 
 				if( result !== false ) {
 					match = result;
 					break;
@@ -121,21 +113,19 @@ class Lexiparse {
 		} // end of loop through segment options
 
 		// If function at end of options, call it.
-		//console.log('CALLING FUNC WITH: ' + JSON.stringify(match)); 
 		if( match !== false && typeof options[options.length-1] === 'function' ) {
 			options[options.length-1]( match );
 		}
 
-		//console.log('\t\tOption Found: ' + JSON.stringify(match));
 		return match;
 	}  // end of matchOption()
 
 	// Return Match Results of Ordered Sequence of Items
 	matchSequence( code, pos, sequence, path = [] ) {
-		//console.log('Entered matchSequence with path: ' + JSON.stringify(path) + '; Seeking sequence: ' + JSON.stringify(sequence));
 		var match = { type:'sequence', values:[], posAfter:pos };  // Findings holds each match in sequence
 
 		for( var i = 0; i < sequence.length; i += 1 ) {
+			if( i > 0 ) path = [];  // NOTE: crude but effective fix for 1+1+1 issue. Will this work in all cases? 
 			let required = sequence[i];
 
 			// If process function then run (could be multiple in sequence -- is that useful?)
@@ -146,7 +136,6 @@ class Lexiparse {
 
 			// Skip any characters specified to ignore
 			while( this.option.ignore.indexOf(code[pos]) !== -1 ) pos += 1;
-			//console.log('\t\tLooking for required "' + required + '" at ' + JSON.stringify(code.substr(pos,15)) + '..');
 
 			// If required is a sub-segment or literal string (prefix of : for subsegment, unless :: escaped)
 			if( typeof required === 'string' ) {
@@ -159,7 +148,6 @@ class Lexiparse {
 
 				if( isSubsegment === true )  { 
 					result = this.matchOption( code, pos, required, path );
-					//console.log('RETURNED TO REQUIREMENT "' + required + '" with: ' + JSON.stringify(result)); // XXX
 				}
 				if( isSubsegment === false ) result = this.matchLiteral( code, pos, required );
 			}
@@ -175,12 +163,10 @@ class Lexiparse {
             else {
                 //match.found.push.apply(match.found, result.found);
                 match.values.push({ type: result.type, value: result.value });
-                //console.log('NOW: ' + JSON.stringify(match));
 
                 //if (result.found !== undefined) match.found.push( result.found );
 				pos = result.posAfter;
 			}
-			//console.log('\t\tFound required "' + required + '": ' + JSON.stringify(match))
 		} // end of loop through sequence
 		
         if (match !== false) {
@@ -188,7 +174,6 @@ class Lexiparse {
             let handler = sequence[sequence.length - 1];
             if (typeof handler === 'function') handler(match);
         }
-		//console.log('\tFULL SEQUENCE: ' + JSON.stringify(match));
 		return match;
 	} // end of matchSequence()
 

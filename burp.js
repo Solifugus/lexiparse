@@ -74,6 +74,7 @@ let grammar = {
 	'stmt':[
 		['output','=',':expr', output],
 		[':var','=',':expr', assignVar],
+		//['if',':cond','then',':stmt', ifthen],  // TODO
 	],
 	'expr':[
 		['ask',':strlit', ask],
@@ -92,7 +93,7 @@ let grammar = {
 
 // ======================<< Sample Program >>========================
 let program = ''
-	        //+'output = 15-10+1-6'
+	        +'output = 15+10+1\n'
             + 'year = 2018\n'
 	        //+ 'output = "YEAR "\n'
 	        + 'output = year\n'
