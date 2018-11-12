@@ -141,7 +141,7 @@ class Lexiparse {
 			if( typeof required === 'string' ) {
 				var isSubsegment;
 				if( required[0] === ':' ) {
-					if( required[1] === ':' ) { isSubseqment = false; } else { isSubsegment = true; }
+					if( required[1] === ':' ) { isSubsegment = false; } else { isSubsegment = true; }
 					required = required.substr(1);
 				}
 				else { isSubsegment = false; }
