@@ -5,9 +5,10 @@
 class Lexiparse {
 	constructor( grammar, option ) {
 		this.grammar   = grammar;  // language definition object (see docs)
-		if( option.caseful !== true )     option.caseful = false;
-		if( option.top === undefined )    option.top = 'stmt';
-		if( option.ignore === undefined ) option.ignore = [' ','\t','\n'];
+		if( option.binding === undefined )  option.binding = this;
+		if( option.caseful !== true )       option.caseful = false;
+		if( option.top === undefined )      option.top = 'stmt';
+		if( option.ignore === undefined )   option.ignore = [' ','\t','\n'];
 		this.option = option;
 	};  // End of constructor()
 
@@ -114,7 +115,8 @@ class Lexiparse {
 
 		// If function at end of options, call it.
 		if( match !== false && typeof options[options.length-1] === 'function' ) {
-			options[options.length-1]( match );
+			//options[options.length-1]( match ); XXX
+			options[options.length-1].bind(this.option.binding)(match);
 		}
 
 		return match;
@@ -172,7 +174,8 @@ class Lexiparse {
         if (match !== false) {
             match.posAfter = pos;
             let handler = sequence[sequence.length - 1];
-            if (typeof handler === 'function') handler(match);
+            //if (typeof handler === 'function') handler(match); XXX
+            if (typeof handler === 'function') handler.bind(this.option.binding)(match);
         }
 		return match;
 	} // end of matchSequence()
