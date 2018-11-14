@@ -1,5 +1,14 @@
 
 TODO:
+	[ ] Build a notation to compile from (but keep JavaScript object method, as well)
+	[ ] Simplify what is returned to callbacks.. This will break backward compatibility but at some point, it should be done.
+	[ ] Write tutorial and good documentation
 
-	[ ] Pass values up from sub-segment functions..
+
+===============================================================================
+Coding Advice
+
+	* Order of Precidents
+	  Put keywords first before variable names so they are not interpreted as
+	  variables..
 

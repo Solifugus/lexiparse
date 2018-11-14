@@ -1,7 +1,7 @@
 {
   "name": "lexiparse",
-  "version": "1.0.0",
-  "description": "Combined Lexical Analyzer and Parser for making programming language interpreters or compilers -- but from JavaScript.",
+  "version": "1.0.1",
+  "description": "Combined Lexical Analyzer and Parser for making programming language interpreters or compilers -- but from JavaScript. (Note: the Lexiparse class is all you need.  The rest is for the example.)",
   "main": "lexiparse.js",
   "scripts": {
     "test": "./burp.js"
