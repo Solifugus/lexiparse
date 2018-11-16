@@ -1,6 +1,6 @@
 {
   "name": "lexiparse",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Combined Lexical Analyzer and Parser for making programming language interpreters or compilers -- but from JavaScript. (Note: the Lexiparse class is all you need.  The rest is for the example.)",
   "main": "lexiparse.js",
   "scripts": {
