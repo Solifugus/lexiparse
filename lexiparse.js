@@ -1,6 +1,10 @@
 #!/usr/bin/nodejs
 
 // Test Using: node ./lang.js
+// TODO:
+//   [ ] Fix: gives syntax error when function does not exist.
+//   [ ] Improve: data given to functions looks like crap.
+//   [ ] Fix: options don't seem to return anything to sequences (at least sequences).
 
 class Lexiparse {
 	constructor( grammar, option ) {
@@ -20,7 +24,8 @@ class Lexiparse {
 	// Run Program
 	run( program, pos = 0 ) {
 		// Execute each statement in program
-		while( pos < program.length ) {
+		this.finished = false;
+		while( pos < program.length && !this.finished ) {
 			var match = this.matchOption( program, pos, this.option.top );
 			if( match === false ) {
 				while( this.option.ignore.indexOf(program[pos]) !== -1 ) pos += 1; // skip passed any ignored characters
@@ -57,11 +62,15 @@ class Lexiparse {
 		while( this.option.ignore.indexOf(code[pos]) !== -1 ) pos += 1;
 	
 		// If we whitespaced past to the end of the program..
-		if( pos >= code.length ) match = { found:[], posAfter:pos };
+		if( pos >= code.length ) {
+			this.finished = true;
+			match = { found:[], posAfter:pos };
+			return match;
+		}
 
 		// Get segment from label
 		var options = this.grammar[label];
-		if( options === undefined ) throw 'ERROR in Language Definition: segment "' + label + '" is not defined.';
+		if( options === undefined ) throw 'ERROR in Language Definition: option "' + label + '" is not defined.';
 
 		// Search for First Segment Option Matching Current Code Position Else Error
 		for( var i = 0; i < options.length; i += 1 ) { 
@@ -70,6 +79,8 @@ class Lexiparse {
 			// Ignore function -- execute only after matching option found (function should in array after last option)
 			if( typeof option === 'function' ) continue;
 
+			if( option === undefined ) throw 'ERROR in Language Definition: option "' + label + '" item ' + i + ' is not defined.'; 
+
 			// If option is sub-segment (e.g. ':label')
 			if( typeof option === 'string' && option[0] === ':' ) {
 				// If not infinite recurse, seek option..
@@ -77,6 +88,7 @@ class Lexiparse {
 				let result = this.matchOption( code, pos, option.substr(1), path );
 				path.pop();
 				if( result !== false ) {
+					console.log('XXX ' + JSON.stringify(result)); // TODO: matchOption not always getting results to functions
 					match = result;
 					break;
 				}
@@ -115,7 +127,6 @@ class Lexiparse {
 
 		// If function at end of options, call it.
 		if( match !== false && typeof options[options.length-1] === 'function' ) {
-			//options[options.length-1]( match ); XXX
 			options[options.length-1].bind(this.option.binding)(match);
 		}
 
@@ -174,7 +185,6 @@ class Lexiparse {
         if (match !== false) {
             match.posAfter = pos;
             let handler = sequence[sequence.length - 1];
-            //if (typeof handler === 'function') handler(match); XXX
             if (typeof handler === 'function') handler.bind(this.option.binding)(match);
         }
 		return match;
@@ -198,8 +208,9 @@ class Lexiparse {
 	// Return Match Result of Regular Expression
 	matchRegex( code, pos, regex ) {
 		var match = false;
+		if( pos >= code.length) return match;
 		let result = regex.exec( code.substr(pos) );
-        if (result !== null) {
+        if ( result !== null ) {
             match = { found: result, posAfter: pos + result[0].length };
             match.type = 'regex';
             match.value = result;
