@@ -79,7 +79,8 @@ class Lexiparse {
 			// Ignore function -- execute only after matching option found (function should in array after last option)
 			if( typeof option === 'function' ) continue;
 
-			if( option === undefined ) throw 'ERROR in Language Definition: option "' + label + '" item ' + i + ' is not defined.'; 
+			if( option === null ) throw 'ERROR in Language Definition: option "' + label + '" item ' + i + ' is null (maybe a missing function?).';
+			if( option === undefined ) throw 'ERROR in Language Definition: option "' + label + '" item ' + i + ' is not defined.';
 
 			// If option is sub-segment (e.g. ':label')
 			if( typeof option === 'string' && option[0] === ':' ) {
