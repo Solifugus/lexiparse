@@ -27,7 +27,7 @@ illustrative example:
 			':numlit',
 			':var',
 			[':expr','+',':expr', doAddition],
-			[':expr','+',':expr', doSubtraction],
+			[':expr','-',':expr', doSubtraction],
 			['(',':expr',')']
 		],
 		'var':[/^[A-Za-z][A-Za-z0-9]+/,getValue],
