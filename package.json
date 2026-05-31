@@ -4,7 +4,10 @@
   "description": "Combined Lexical Analyzer and Parser for making programming language interpreters or compilers -- but from JavaScript. (Note: the Lexiparse class is all you need.  The rest is for the example.)",
   "main": "lexiparse.js",
   "scripts": {
-    "test": "./burp.js"
+    "test": "./run-tests.js",
+    "test:quick": "./burp.js",
+    "test:examples": "node examples/bizscript_demo.js && node examples/error_demo.js",
+    "test:phase4": "node tests/phase4_developer_experience_test.js"
   },
   "repository": {
     "type": "git",

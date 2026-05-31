@@ -649,7 +649,7 @@ npm install
 npm test
 
 # Test error handling demo
-node error_demo.js
+node examples/error_demo.js
 
 # Try the original Burp language example
 node burp.js
@@ -667,8 +667,13 @@ node burp.js
 
 ### Sample Files
 - **`burp.js`** - Original simple language demonstration
-- **`error_demo.js`** - Enhanced error handling showcase
-- **`bizscript_demo.js`** - Real-world business logic examples
+- **`examples/error_demo.js`** - Enhanced error handling showcase
+- **`examples/bizscript_demo.js`** - Real-world business logic examples
+
+### Test Suites
+- **`tests/`** - Comprehensive test suites for all platform features
+- **`tests/phase4_developer_experience_test.js`** - Developer tools demonstration
+- **`tests/enterprise_integration_test.js`** - Full enterprise platform tests
 
 ### Business Domain Examples
 - **Healthcare** - Hospital billing, patient eligibility, treatment protocols
