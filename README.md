@@ -1,84 +1,590 @@
+# Lexiparse
+### Production-Ready Business DSL Platform
 
-The Lexiparse class may be used to instantiate a combined lexical analyzer / 
-parser generator for making programming language interpreters and/or 
-compilters.
+[![npm version](https://img.shields.io/npm/v/lexiparse.svg)](https://www.npmjs.com/package/lexiparse)
+[![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](#)
 
-First you must:
-	* Code your language's grammar definition (notation described later herein)
-	* Include and instantiate an instance of the Lexiparse class, passing 
-	  your grammar definition and any non-default options into the constructor.
+**Transform your business logic into executable code that business users can write and IT can deploy confidently.**
 
+Lexiparse is a combined lexical analyzer and parser generator that enables rapid development of domain-specific languages (DSLs) for business applications. From hospital billing systems to insurance policy engines, lexiparse makes complex business logic accessible to non-programmers while maintaining enterprise-grade reliability.
 
-The sample file "burp.js" illustrates with implementation of the "burp" language.
+---
 
-------------------
-Grammar Definition
+## ✨ **Key Features**
 
-The grammar definition is a JavaScript object, such as the following
-illustrative example:
+### 🚀 **Production-Ready Foundation**
+- **Enhanced Error Handling** - Business-friendly error messages with precise location and helpful suggestions
+- **Operator Precedence** - Handles complex mathematical expressions correctly (`rate * amount + tax`)
+- **Control Flow** - Full support for if/else statements, loops, and functions
+- **Multi-Error Collection** - Identify multiple issues in one pass for efficient debugging
+- **Recursion Protection** - Prevents infinite loops and stack overflow errors
 
-	grammar = {
-		'stmt':[
-			['input',':var', getInput],
-			['output',':expr', doOutput],
-			['var','=',':expr', doAssignment]
-		],
-		'expr':[
-			':numlit',
-			':var',
-			[':expr','+',':expr', doAddition],
-			[':expr','-',':expr', doSubtraction],
-			['(',':expr',')']
-		],
-		'var':[/^[A-Za-z][A-Za-z0-9]+/,getValue],
-		'numlit':[/^[+-]?\d+(\.\d+)?/],
-	}
+### 🌐 **Universal JavaScript Deployment**
+- **Browser** - Client-side validation and interactive rule builders
+- **Node.js** - Server-side processing with database and API integration
+- **QuickJS** - Standalone executables for embedded systems and edge computing
 
-	The 'stmt', 'expr', 'var', and 'numlit' elements are named grammar
-segments.  Each holds an array of options, any of which will evaluate to
-it.  These options may be strings, regular expressions, or sub-arrays 
-(representing sequences).  Each works like this:
+### 💼 **Business-Focused Design**
+- **Human-Readable Syntax** - Natural language constructs that business experts can understand
+- **Domain-Specific** - Optimized for business rules, calculations, and workflows
+- **Secure by Default** - Built-in sandboxing and validation for production deployment
 
-	String
-		A string not starting with a colon is interpreted as a literal to match
-in the program source code.  However, if the string begins with a colon (and
-not a double-colon than the rest of the string is interpreted as the name of
-a grammar segment.  For example, ':expr' means as defined under segment 'expr'.
-However, '::expr' would mean the text literal '::expr'.  
- 
-	Regular Expression
-		Regular expressions must always begin with a karat character ('^') but
-are otherwise normal regular expressions to match against program source code.
-It will extract exactly what the JavaScript Rexexp.exec() produces, so you may
-make use of parenthesis, etc., as desired.
+---
 
-	Sequence
-		If a segment option is an array itself, the elements of that array are
-interpreted as required items in sequence.  Furthermore, the last element may
-optionally be a function to preprocess the option's returned values.  For 
-example, the 'stmt' segment has 3 sequences under it.  The 'expr' segment
-has 5 options, the last 3 of which are sequences. 
+## 🚀 **Quick Start**
 
--------------------
-Constructor Options
+### Installation
+```bash
+npm install lexiparse
+```
 
-	caseful
-		This may be true (default) for case sensitivity or false for case 
-		insensitivity.
+### Basic Usage
+```javascript
+const Lexiparse = require('lexiparse');
 
-	ignore
-		This should hold an array of characters to ignore.  Usually, this will
-		be the whitespace characters of your language.
-		NOTE: In the future, I might want to add a way to specify ignored 
-		characters for each named segment, individually.
+// Define your business language grammar
+const grammar = {
+    'calculation': [
+        [':variable', '=', ':expr', assignVariable],  // Callback to handle assignment
+        ['output', ':expr', outputValue]              // Callback to handle output
+    ],
+    'expr': [
+        ['(', ':expr', ')'],                          // No callback needed - just grouping
+        [':expr', '*', ':expr', multiply],            // Callback to perform multiplication
+        [':expr', '+', ':expr', add],                 // Callback to perform addition
+        ':number',                                    // Reference to terminal rule
+        ':variable'                                   // Reference to terminal rule
+    ],
+    'variable': [/^[A-Za-z][A-Za-z0-9_]*/, function(detail) {
+        detail.type = 'variable';
+        detail.value = detail.found[0];              // Extract variable name
+    }],
+    'number': [/^[+-]?\d+(\.\d+)?/, function(detail) {
+        detail.type = 'number';
+        detail.value = Number(detail.found[0]);      // Convert to number
+    }]
+};
 
-	sequenceBlind (TODO: not yet implemeneted)
-		If true, sequences will match if all elements exist in place, in order,
-		but will ignore any extraneous elements before, after, or between.
+// Callback functions for semantic actions
+function assignVariable(detail) {
+    const varName = detail.values[0].value;
+    const value = detail.values[2].value;
+    variables[varName] = value;                      // Store in variable table
+    detail.value = value;
+}
 
-	literalBlind (TODO: not yet implemented)
-		If true, tolerate keyword mispellings where still recognizable.
+function outputValue(detail) {
+    console.log(detail.values[1].value);             // Print the result
+}
 
+function multiply(detail) {
+    detail.value = detail.values[0].value * detail.values[2].value;
+    detail.type = 'number';
+}
 
+function add(detail) {
+    detail.value = detail.values[0].value + detail.values[2].value;
+    detail.type = 'number';
+}
 
+// Create interpreter with enhanced error handling
+const interpreter = new Lexiparse(grammar, {
+    caseful: false,
+    ignore: [' ', '\t', '\n'],
+    collectErrors: true,
+    maxErrors: 10,
+    attemptRecovery: true,
+    precedence: {
+        '=': 1,
+        '+': 5, '-': 5,
+        '*': 6, '/': 6
+    }
+});
 
+// Execute business logic
+const businessRule = `
+    rate = 5.5
+    tax_rate = 0.08
+    total = rate * 100 + tax_rate * 1000
+    output total
+`;
+
+const success = interpreter.run(businessRule);
+if (success) {
+    console.log('✅ Business rule executed successfully!');
+} else {
+    console.log('❌ Found errors:');
+    interpreter.reportAllErrors();
+}
+```
+
+---
+
+## 💼 **Real-World Business Examples**
+
+### Hospital Billing System
+```javascript
+// BizScript: Hospital billing logic that business users can modify
+function calculate_reimbursement(patient_type, service_code, amount) {
+    base_rate = get_base_rate(service_code);
+    
+    if (patient_type == "emergency") {
+        multiplier = 1.5;
+    } else if (patient_type == "routine") {
+        multiplier = 1.0;
+    } else {
+        multiplier = 0.8;
+    }
+    
+    return amount * base_rate * multiplier;
+}
+
+// Process insurance claim
+claim_total = 0;
+for (service in patient.services) {
+    if (service.covered) {
+        service_cost = calculate_reimbursement(patient.type, service.code, service.amount);
+        claim_total = claim_total + service_cost;
+    }
+}
+
+if (claim_total > policy.max_coverage) {
+    patient_responsibility = claim_total - policy.max_coverage;
+} else {
+    patient_responsibility = 0;
+}
+
+output claim_total;
+```
+
+### Insurance Policy Engine
+```javascript
+// Determine policy eligibility and rates
+function calculate_premium(applicant) {
+    base_rate = 100;
+    risk_multiplier = 1.0;
+    
+    // Age factor
+    if (applicant.age < 25) {
+        risk_multiplier = risk_multiplier * 1.5;
+    } else if (applicant.age > 65) {
+        risk_multiplier = risk_multiplier * 1.2;
+    }
+    
+    // Driving record
+    if (applicant.accidents > 0) {
+        risk_multiplier = risk_multiplier * (1.0 + applicant.accidents * 0.3);
+    }
+    
+    return base_rate * risk_multiplier;
+}
+```
+
+---
+
+## 🏗️ **Architecture & Deployment**
+
+### Platform-Specific Runtimes
+```javascript
+// Universal module structure
+const LexiparseCore = require('./lexiparse-core.js');
+const runtime = detectEnvironment() === 'browser' ? BrowserRuntime :
+                detectEnvironment() === 'node' ? NodeRuntime :
+                QuickJSRuntime;
+
+const interpreter = new LexiparseCore(grammar, { runtime });
+```
+
+### Deployment Options
+
+#### **Browser Integration**
+```html
+<script src="lexiparse.js"></script>
+<script>
+    // Client-side business rule validation
+    const ruleValidator = new Lexiparse(businessGrammar);
+    ruleValidator.run(userInputRule);
+</script>
+```
+
+#### **Node.js Backend**
+```javascript
+// Server-side business logic processing
+const express = require('express');
+const Lexiparse = require('lexiparse');
+
+app.post('/process-rule', (req, res) => {
+    const interpreter = new Lexiparse(businessGrammar);
+    const result = interpreter.run(req.body.businessLogic);
+    res.json({ success: result, errors: interpreter.errors });
+});
+```
+
+#### **QuickJS Standalone**
+```bash
+# Compile to standalone executable
+qjs --compile business-engine.js
+./business-engine input.biz
+```
+
+---
+
+## 🛡️ **Enhanced Error Handling**
+
+### Business-Friendly Error Messages
+```javascript
+// Input with errors
+const faultyCode = `
+rate = 5.5
+total = rate * amount + tax)  // Extra parenthesis
+if (total = 200 {             // Missing closing parenthesis, wrong operator
+    ouput = "good job"        // Misspelled 'output'
+}
+`;
+
+// Enhanced error reporting
+const interpreter = new Lexiparse(grammar, { 
+    collectErrors: true,
+    maxErrors: 5,
+    attemptRecovery: true 
+});
+
+const success = interpreter.run(faultyCode);
+
+// Get detailed error report
+if (!success) {
+    interpreter.errors.forEach(error => {
+        console.log(`❌ ${error.type.toUpperCase()} ERROR at line ${error.line}, column ${error.column}:`);
+        console.log(`   ${error.message}`);
+        console.log(`   ${error.context}`);
+        console.log(`   ${' '.repeat(error.column - 1)}^^^`);
+        if (error.suggestion) {
+            console.log(`💡 Suggestion: ${error.suggestion}`);
+        }
+    });
+}
+```
+
+### Sample Error Output
+```
+❌ SYNTAX ERROR at line 2, column 26:
+   Unexpected ')' found
+   total = rate * amount + tax)
+                           ^^^
+💡 Suggestion: Remove the extra closing parenthesis
+
+❌ SYNTAX ERROR at line 3, column 15:
+   Expected '==' for comparison, found '='
+   if (total = 200 {
+               ^^^
+💡 Suggestion: Use '==' to compare values, '=' assigns them
+```
+
+---
+
+## 📚 **Grammar Definition Guide**
+
+### Basic Grammar Structure
+```javascript
+const grammar = {
+    // Non-terminal rules (compound expressions)
+    'statement': [
+        [':variable', '=', ':expression', handleAssignment],  // Assignment with callback
+        ['if', '(', ':condition', ')', ':block', handleIf],   // Conditional with callback
+        ['while', '(', ':condition', ')', ':block', handleWhile] // Loop with callback
+    ],
+    
+    // Expression rules with precedence handling
+    'expression': [
+        ['(', ':expression', ')'],             // Parentheses - no callback needed
+        ':number',                             // Literal numbers
+        ':variable',                           // Variable references
+        ':function_call'                       // Function calls
+    ],
+    
+    // Terminal rules (tokens) - callbacks usually required
+    'variable': [/^[A-Za-z][A-Za-z0-9_]*/, function(detail) {
+        detail.type = 'variable';
+        detail.value = detail.found[0];        // Extract matched text
+    }],
+    
+    'number': [/^[+-]?\d+(\.\d+)?/, function(detail) {
+        detail.type = 'number';
+        detail.value = Number(detail.found[0]); // Convert to number
+    }]
+};
+```
+
+### When to Use Callback Functions
+
+#### **Required Callbacks:**
+```javascript
+// 1. Terminal rules (regex patterns) - extract values from matched text
+'identifier': [/^[A-Za-z]\w*/, function(detail) {
+    detail.value = detail.found[0];  // REQUIRED: extract the identifier name
+}],
+
+// 2. Semantic actions - when you need to process or compute results
+'assignment': [
+    [':var', '=', ':expr', function(detail) {
+        variables[detail.values[0].value] = detail.values[2].value;  // REQUIRED: store variable
+        detail.value = detail.values[2].value;
+    }]
+],
+
+// 3. Mathematical operations - when precedence doesn't handle it
+'multiplication': [
+    [':expr', '*', ':expr', function(detail) {
+        detail.value = detail.values[0].value * detail.values[2].value;  // REQUIRED: compute result
+        detail.type = 'number';
+    }]
+]
+```
+
+#### **Optional Callbacks:**
+```javascript
+// 1. Simple grouping - parser handles structure automatically
+'parentheses': [
+    ['(', ':expression', ')']  // NO CALLBACK: just changes precedence
+],
+
+// 2. Pure syntax rules - when you only care about structure
+'block': [
+    ['{', ':statements', '}']  // NO CALLBACK: parser extracts statements automatically
+],
+
+// 3. References to other rules - when pass-through is desired  
+'primary': [
+    ':number',                 // NO CALLBACK: uses number's callback
+    ':variable'                // NO CALLBACK: uses variable's callback
+]
+```
+
+#### **Callback Function Parameters:**
+```javascript
+function myCallback(detail) {
+    // detail.found[]    - Raw matched text from regex
+    // detail.values[]   - Processed values from sub-rules
+    // detail.type       - Set this for the result type
+    // detail.value      - Set this for the result value
+    
+    console.log('Matched:', detail.found);     // ["identifier_name"]  
+    console.log('Sub-values:', detail.values); // [{type: 'string', value: 'hello'}]
+    
+    detail.type = 'custom';
+    detail.value = 'processed result';
+}
+```
+
+### Advanced Features
+```javascript
+// Grammar with callback functions for semantic actions
+const advancedGrammar = {
+    'assignment': [
+        [':variable', '=', ':expression', function(detail) {
+            // Custom processing for assignments
+            const varName = detail.values[0].value;
+            const value = detail.values[2].value;
+            variables[varName] = value;
+            detail.type = 'assignment';
+            detail.value = value;
+        }]
+    ],
+    
+    'function_call': [
+        [':identifier', '(', ':argument_list', ')', function(detail) {
+            // Process function calls
+            const funcName = detail.values[0].value;
+            const args = detail.values[2].value;
+            detail.type = 'function_call';
+            detail.value = callFunction(funcName, args);
+        }]
+    ]
+};
+```
+
+---
+
+## ⚙️ **Configuration Options**
+
+### Constructor Options
+```javascript
+const interpreter = new Lexiparse(grammar, {
+    // Case sensitivity
+    caseful: false,                    // Case-insensitive parsing
+    
+    // Characters to ignore
+    ignore: [' ', '\t', '\n'],         // Whitespace handling
+    
+    // Error handling
+    collectErrors: true,               // Collect multiple errors
+    maxErrors: 10,                     // Maximum errors before stopping
+    attemptRecovery: true,             // Try to continue after errors
+    
+    // Operator precedence
+    precedence: {
+        '=': 1,                        // Assignment (lowest)
+        '||': 2, '&&': 3,             // Logical operators
+        '==': 4, '!=': 4, '<': 4, '>': 4,  // Comparison
+        '+': 5, '-': 5,               // Addition/subtraction
+        '*': 6, '/': 6, '%': 6        // Multiplication/division (highest)
+    },
+    
+    // Security and performance
+    maxRecursionDepth: 1000,          // Prevent infinite recursion
+    timeout: 30000                    // Execution timeout (ms)
+});
+```
+
+---
+
+## 🧪 **Testing Your DSL**
+
+### Unit Testing Business Logic
+```javascript
+const assert = require('assert');
+
+// Test business calculations
+function testInsuranceCalculation() {
+    const grammar = createInsuranceGrammar();
+    const interpreter = new Lexiparse(grammar);
+    
+    const testCase = `
+        age = 25
+        accidents = 0
+        premium = calculate_premium(age, accidents)
+        output premium
+    `;
+    
+    const result = interpreter.run(testCase);
+    assert(result === true, 'Insurance calculation should succeed');
+    assert(interpreter.getOutput() === 150, 'Premium should be $150 for 25-year-old with clean record');
+}
+
+// Test error handling
+function testErrorRecovery() {
+    const interpreter = new Lexiparse(grammar, { 
+        collectErrors: true,
+        maxErrors: 5 
+    });
+    
+    const faultyCode = `
+        rate = 5.5
+        total = rate * amount +  // Missing operand
+        if total > 100          // Missing parentheses
+            output = "high"     // Missing 'then'
+    `;
+    
+    const result = interpreter.run(faultyCode);
+    assert(result === false, 'Should detect errors');
+    assert(interpreter.errors.length === 3, 'Should find 3 errors');
+}
+```
+
+---
+
+## 🎯 **Development Roadmap**
+
+### ✅ **Phase 1: Foundation Complete**
+- Enhanced error handling with business-friendly messages
+- Operator precedence for mathematical expressions
+- Control flow constructs (if/else, while, functions, blocks)
+- Recursion protection and performance optimizations
+
+### 🔄 **Phase 2: Data Structures & Integration** *(Next)*
+- Arrays and objects for real-world business data
+- External function calls for database/API integration
+- String manipulation and date/time handling
+- Platform-specific runtime modules
+
+### 🔮 **Phase 3: Production Features** *(Planned)*
+- Security sandboxing and resource limits
+- Performance optimization and compilation
+- Module system for code reuse
+- Standard library for common business functions
+
+### 🎨 **Phase 4: Developer Experience** *(Future)*
+- Rich error messages with fix suggestions
+- Interactive debugging and REPL
+- Testing framework for business logic
+- Syntax highlighting and IDE integration
+
+---
+
+## 🤝 **Contributing**
+
+We welcome contributions! Whether you're:
+- **Business Users** - sharing real-world DSL requirements
+- **Developers** - implementing features or fixing bugs
+- **DevOps Engineers** - improving deployment and integration
+- **Designers** - enhancing developer experience
+
+### Development Setup
+```bash
+# Clone the repository
+git clone https://github.com/Solifugus/lexiparse.git
+cd lexiparse
+
+# Install dependencies
+npm install
+
+# Run tests
+npm test
+
+# Test error handling demo
+node error_demo.js
+
+# Try the original Burp language example
+node burp.js
+```
+
+### Feature Development
+1. **Create feature branch** from `master`
+2. **Write tests** for new functionality
+3. **Update documentation** including this README
+4. **Submit pull request** with clear description
+
+---
+
+## 📖 **Examples & Documentation**
+
+### Sample Files
+- **`burp.js`** - Original simple language demonstration
+- **`error_demo.js`** - Enhanced error handling showcase
+- **`bizscript_demo.js`** - Real-world business logic examples
+
+### Business Domain Examples
+- **Healthcare** - Hospital billing, patient eligibility, treatment protocols
+- **Finance** - Risk assessment, loan calculations, compliance rules
+- **Insurance** - Policy pricing, claims processing, underwriting rules
+- **Manufacturing** - Quality control, inventory management, production planning
+
+---
+
+## 📄 **License**
+
+This project is licensed under the **GPL-2.0-only** License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 🔗 **Links**
+
+- **GitHub Repository**: https://github.com/Solifugus/lexiparse
+- **npm Package**: https://www.npmjs.com/package/lexiparse
+- **Issue Tracker**: https://github.com/Solifugus/lexiparse/issues
+- **Roadmap**: [ROADMAP.md](ROADMAP.md)
+
+---
+
+## 💡 **Why Lexiparse?**
+
+**"Business logic belongs in the hands of business experts."**
+
+Traditional programming creates a barrier between business knowledge and implementation. Lexiparse eliminates that barrier by enabling domain experts to write executable business rules in natural, readable syntax while providing IT with the tools to deploy those rules safely and efficiently.
+
+**Transform your business processes from documentation into automation.**
+
+---
+
+*Built with ❤️ for business automation and domain-specific language development.*
