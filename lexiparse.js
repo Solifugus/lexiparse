@@ -32,6 +32,12 @@ class Lexiparse {
 		}
 
 		this.rightAssociative = new Set(['=', '!', 'unary-', 'unary+']);
+
+		// Add control flow support
+		this.controlFlowEnabled = option.controlFlow !== false;
+		this.executionStack = [];
+		this.shouldExecute = true;
+
 		this.option = option;
 	};  // End of constructor()
 
@@ -511,6 +517,91 @@ class Lexiparse {
 
 		// For non-binary operations, just return as-is
 		return node;
+	}
+
+	// ==================== CONTROL FLOW METHODS ====================
+
+	// Push a control flow context (if, while, function, etc.)
+	pushControlFlow( type, condition = true, metadata = {} ) {
+		this.executionStack.push({
+			type: type,
+			condition: condition,
+			metadata: metadata,
+			previousShouldExecute: this.shouldExecute
+		});
+
+		// Update execution state based on control type
+		if (type === 'if' || type === 'while') {
+			this.shouldExecute = this.shouldExecute && condition;
+		}
+
+		return this.executionStack.length - 1; // Return stack index
+	}
+
+	// Pop the most recent control flow context
+	popControlFlow() {
+		if (this.executionStack.length > 0) {
+			let context = this.executionStack.pop();
+			this.shouldExecute = context.previousShouldExecute;
+			return context;
+		}
+		return null;
+	}
+
+	// Check if statements should currently be executed
+	shouldExecuteStatement() {
+		return this.shouldExecute;
+	}
+
+	// Execute a statement conditionally
+	executeConditionally( callback, detail ) {
+		if (this.shouldExecuteStatement()) {
+			if (typeof callback === 'function') {
+				return callback.call(this.option.binding, detail);
+			}
+		} else {
+			// Mark as skipped but don't execute
+			if (detail) {
+				detail.skipped = true;
+			}
+		}
+		return detail;
+	}
+
+	// Built-in control flow statement handlers
+	handleIfStatement( detail ) {
+		// Extract condition from if statement: if (condition) statement
+		let condition = detail.values[2].value; // condition between parentheses
+
+		// Push if context
+		this.pushControlFlow('if', condition);
+
+		// The statement after the condition will be parsed with updated execution context
+		// Pop will happen after the then-statement is processed
+
+		detail.type = 'if_statement';
+		detail.value = condition;
+		return detail;
+	}
+
+	handleWhileLoop( detail ) {
+		// Extract condition from while statement: while (condition) statement
+		let condition = detail.values[2].value;
+
+		// For now, just handle as a single execution (not a real loop)
+		// A full implementation would need to reparse the body multiple times
+		this.pushControlFlow('while', condition);
+
+		detail.type = 'while_statement';
+		detail.value = condition;
+		return detail;
+	}
+
+	handleBlockStatement( detail ) {
+		// Blocks just group statements, don't change execution
+		detail.type = 'block_statement';
+		detail.value = 'block_executed';
+		return detail;
 	}
 
 } // end of Lexiparse class
