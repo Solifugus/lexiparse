@@ -38,6 +38,16 @@ class Lexiparse {
 		this.executionStack = [];
 		this.shouldExecute = true;
 
+		// Enhanced error handling system
+		this.errors = [];
+		this.collectErrors = option.collectErrors !== false; // Default to true
+		this.maxErrors = option.maxErrors || 10;
+		this.attemptRecovery = option.attemptRecovery !== false; // Default to true
+
+		// Recursion protection
+		this.maxRecursionDepth = option.maxRecursionDepth || 100;
+		this.recursionDepth = 0;
+
 		this.option = option;
 	};  // End of constructor()
 
@@ -46,22 +56,256 @@ class Lexiparse {
 		// TODO
 	}
 
-	// Run Program
+	// ==================== ENHANCED ERROR HANDLING ====================
+
+	// Add an error to the collection with detailed context
+	addError( type, message, pos, expected = null, found = null, suggestion = null ) {
+		if( this.errors.length >= this.maxErrors ) return;
+
+		let linePos = this.getLinePos( this.currentProgram, pos );
+		let contextLines = this.getErrorContext( this.currentProgram, pos, linePos );
+
+		let error = {
+			type: type,
+			message: message,
+			line: linePos.lineNo,
+			column: linePos.charNo,
+			position: pos,
+			expected: expected,
+			found: found,
+			suggestion: suggestion,
+			context: contextLines
+		};
+
+		this.errors.push( error );
+
+		if( !this.collectErrors ) {
+			this.reportError( error );
+			return false; // Stop parsing
+		}
+
+		return true; // Continue parsing
+	}
+
+	// Get contextual lines around an error for better visibility
+	getErrorContext( program, pos, linePos ) {
+		let lines = program.split('\n');
+		let errorLine = linePos.lineNo - 1; // Convert to 0-based
+		let startLine = Math.max(0, errorLine - 1);
+		let endLine = Math.min(lines.length - 1, errorLine + 1);
+
+		let context = [];
+		for( let i = startLine; i <= endLine; i++ ) {
+			let marker = i === errorLine ? ' >>> ' : '     ';
+			let lineNum = String(i + 1).padStart(3, ' ');
+			context.push( lineNum + marker + lines[i] );
+
+			// Add error pointer line
+			if( i === errorLine ) {
+				let pointer = ' '.repeat(7 + linePos.charNo - 1) + '^';
+				context.push( '   ' + pointer );
+			}
+		}
+
+		return context;
+	}
+
+	// Report a single error with business-friendly formatting
+	reportError( error ) {
+		console.error('\n❌ ' + this.getBusinessFriendlyMessage( error ));
+		console.error('   📍 Line ' + error.line + ', column ' + error.column);
+
+		if( error.expected && error.found ) {
+			console.error('   🔍 Expected: ' + error.expected);
+			console.error('   🔍 Found: ' + error.found);
+		}
+
+		if( error.suggestion ) {
+			console.error('   💡 Suggestion: ' + error.suggestion);
+		}
+
+		console.error('');
+		error.context.forEach( line => console.error('   ' + line) );
+		console.error('');
+	}
+
+	// Convert technical error messages to business-friendly language
+	getBusinessFriendlyMessage( error ) {
+		switch( error.type ) {
+			case 'syntax':
+				if( error.found && error.found.match(/^[A-Za-z]/) ) {
+					return 'Unknown word "' + error.found + '" found';
+				}
+				if( error.found && error.found.match(/^[\d]/) ) {
+					return 'Number in wrong place: "' + error.found + '"';
+				}
+				return 'Unexpected symbol or text';
+
+			case 'missing_operator':
+				return 'Missing operator between values';
+
+			case 'missing_value':
+				return 'Missing value or expression';
+
+			case 'unmatched_brace':
+				return 'Unmatched brace - check your { } brackets';
+
+			case 'unmatched_paren':
+				return 'Unmatched parenthesis - check your ( ) brackets';
+
+			case 'invalid_assignment':
+				return 'Invalid assignment - check variable name and = sign';
+
+			case 'function_not_found':
+				return 'Unknown function or command';
+
+			default:
+				return error.message || 'Syntax error';
+		}
+	}
+
+	// Get error suggestions based on common mistakes
+	getErrorSuggestion( found, expected, context ) {
+		// Suggest fixes for common business logic mistakes
+		if( found && expected ) {
+			// Missing quotes around text
+			if( expected.includes('string') && found.match(/^[A-Za-z]/) && !found.match(/^"/) ) {
+				return 'Try putting quotes around text: "' + found + '"';
+			}
+
+			// Wrong comparison operator
+			if( found === '=' && expected.includes('comparison') ) {
+				return 'Use == for comparison, = for assignment';
+			}
+
+			// Missing semicolon or statement separator
+			if( expected.includes('statement') && found !== ';' ) {
+				return 'Each statement should be on its own line or separated by semicolon';
+			}
+
+			// Misspelled keywords
+			if( found.toLowerCase() === 'ouput' ) return 'Did you mean "output"?';
+			if( found.toLowerCase() === 'fi' ) return 'Did you mean "if"?';
+			if( found.toLowerCase() === 'esle' ) return 'Did you mean "else"?';
+		}
+
+		return null;
+	}
+
+	// Report all collected errors at the end
+	reportAllErrors() {
+		if( this.errors.length === 0 ) return;
+
+		console.error('\n🚨 Found ' + this.errors.length + ' error(s) in your script:\n');
+
+		this.errors.forEach( (error, index) => {
+			console.error('Error #' + (index + 1) + ':');
+			this.reportError( error );
+		});
+
+		console.error('📝 Fix these errors and try again.');
+	}
+
+	// Run Program with enhanced error handling
 	run( program, pos = 0 ) {
-		// Execute each statement in program
+		this.currentProgram = program; // Store for error reporting
+		this.errors = []; // Reset error collection
 		this.finished = false;
+
 		while( pos < program.length && !this.finished ) {
 			var match = this.matchOption( program, pos, this.option.top );
+
 			if( match === false ) {
-				while( this.option.ignore.indexOf(program[pos]) !== -1 ) pos += 1; // skip passed any ignored characters
-				let linePos = this.getLinePos( program, pos );
-				console.error('Syntax Error on line #' + linePos.lineNo + ', position: ' +  linePos.charNo + '.');
-				console.error('\t--> ' + program.substr(pos,linePos.endOfLine));
+				// Skip any ignored characters to get to actual error
+				while( pos < program.length && this.option.ignore.indexOf(program[pos]) !== -1 ) pos += 1;
+
+				if( pos >= program.length ) break;
+
+				// Analyze the error and provide helpful feedback
+				let found = this.getFoundText( program, pos );
+				let expected = this.getExpectedText( this.option.top );
+				let suggestion = this.getErrorSuggestion( found, expected, program.substr(pos-10, 20) );
+
+				let continueResult = this.addError( 'syntax', 'Unexpected text found', pos, expected, found, suggestion );
+
+				if( !continueResult || !this.attemptRecovery ) {
+					break; // Stop if not collecting errors or can't recover
+				}
+
+				// Attempt error recovery: skip to next likely statement
+				pos = this.attemptErrorRecovery( program, pos );
+			} else {
+				pos = match.posAfter;
+			}
+		}
+
+		// Report all collected errors
+		if( this.collectErrors && this.errors.length > 0 ) {
+			this.reportAllErrors();
+			return false; // Indicate parsing failed
+		}
+
+		return this.errors.length === 0; // Return success status
+	} // end of run()
+
+	// Get text found at error position for better error messages
+	getFoundText( program, pos ) {
+		if( pos >= program.length ) return 'end of file';
+
+		let remaining = program.substr(pos);
+		let match;
+
+		// Try to identify what was actually found
+		if( match = remaining.match(/^[A-Za-z_][A-Za-z0-9_]*/) ) {
+			return match[0]; // Identifier/word
+		}
+		if( match = remaining.match(/^[+-]?\d+(\.\d+)?/) ) {
+			return match[0]; // Number
+		}
+		if( match = remaining.match(/^"[^"]*"?/) ) {
+			return match[0]; // String (possibly unterminated)
+		}
+		if( match = remaining.match(/^[^\s\w]/) ) {
+			return match[0]; // Single special character
+		}
+
+		return remaining.substr(0, 1); // Fallback to single character
+	}
+
+	// Get human-readable description of what was expected
+	getExpectedText( segmentName ) {
+		let expectations = {
+			'stmt': 'a statement (like: output = value, if condition, variable = expression)',
+			'expr': 'an expression or value (like: number, variable, "text", or calculation)',
+			'var': 'a variable name (like: total, rate, patient_type)',
+			'numlit': 'a number (like: 42, 3.14, -10)',
+			'strlit': 'text in quotes (like: "hello", "emergency")',
+			'if_stmt': 'an if statement (like: if (condition) { ... })',
+			'while_stmt': 'a while loop (like: while (condition) { ... })',
+			'block': 'a code block with { } braces',
+			'function_def': 'a function definition (like: function name() { ... })'
+		};
+
+		return expectations[segmentName] || 'valid ' + segmentName;
+	}
+
+	// Attempt to recover from parse errors by skipping to next likely statement start
+	attemptErrorRecovery( program, pos ) {
+		// Look for common statement starters or line breaks
+		let recovery_points = ['\n', ';', 'if', 'while', 'function', 'output', 'return'];
+		let best_pos = pos + 1; // Default: skip one character
+
+		for( let point of recovery_points ) {
+			let next_pos = program.indexOf(point, pos + 1);
+			if( next_pos !== -1 && next_pos < best_pos + 20 ) { // Don't skip too far
+				best_pos = next_pos;
+				if( point === '\n' || point === ';' ) best_pos += 1; // Skip the delimiter itself
 				break;
 			}
-			pos = match.posAfter;
 		}
-	} // end of run()
+
+		return Math.min(best_pos, program.length);
+	}
 
 	// From program character position, return lineNo and charNo (on that last line)
 	getLinePos( program, pos ) {
@@ -80,6 +324,17 @@ class Lexiparse {
 
 	// Find and Return Match of Segment (label), Starting at Code Position (pos)
 	matchOption( code, pos, label, path = [] ) {
+		// Recursion protection
+		this.recursionDepth++;
+		if( this.recursionDepth > this.maxRecursionDepth ) {
+			this.recursionDepth--;
+			if( this.currentProgram && this.addError ) {
+				this.addError( 'recursion_error', 'Parser recursion limit exceeded', pos, null, null,
+					'This might be caused by infinite loops in grammar rules. Check for left-recursive patterns.' );
+			}
+			return false;
+		}
+
 		// Default return value (matched nothing)
 		var match = false;
 
@@ -167,10 +422,19 @@ class Lexiparse {
 				if (error.code && (error.code === 'ENXIO' || error.code === 'ENOTTY')) {
 					throw error;
 				}
-				throw 'ERROR in Callback Function for "' + label + '": ' + error.message;
+				// Use enhanced error reporting for callback errors
+				if( this.currentProgram && this.addError ) {
+					this.addError( 'callback_error', 'Error in language rule processing', pos, null, null,
+						'Check the definition for "' + label + '" - ' + error.message );
+					return false; // Return failed match
+				} else {
+					throw 'ERROR in Callback Function for "' + label + '": ' + error.message;
+				}
 			}
 		}
 
+		// Always decrement recursion depth before returning
+		this.recursionDepth--;
 		return match;
 	}  // end of matchOption()
 
@@ -241,7 +505,14 @@ class Lexiparse {
                     if (error.code && (error.code === 'ENXIO' || error.code === 'ENOTTY')) {
                         throw error;
                     }
-                    throw 'ERROR in Sequence Callback: ' + error.message;
+                    // Use enhanced error reporting for sequence callback errors
+                    if( this.currentProgram && this.addError ) {
+                        this.addError( 'callback_error', 'Error in sequence processing', pos, null, null,
+                            'Check the sequence definition - ' + error.message );
+                        return false; // Return failed match
+                    } else {
+                        throw 'ERROR in Sequence Callback: ' + error.message;
+                    }
                 }
             }
         }
@@ -280,9 +551,23 @@ class Lexiparse {
 
 	// Parse expression with operator precedence climbing
 	parseExpressionWithPrecedence( code, pos, minPrecedence = 0 ) {
+		// Recursion protection
+		this.recursionDepth++;
+		if( this.recursionDepth > this.maxRecursionDepth ) {
+			this.recursionDepth--;
+			if( this.currentProgram && this.addError ) {
+				this.addError( 'recursion_error', 'Expression parsing recursion limit exceeded', pos, null, null,
+					'Expression may be too complex or contain circular references.' );
+			}
+			return false;
+		}
+
 		// Parse left operand
 		let left = this.parsePrimaryExpression( code, pos );
-		if (!left) return false;
+		if (!left) {
+			this.recursionDepth--;
+			return false;
+		}
 
 		pos = left.posAfter;
 
@@ -306,6 +591,7 @@ class Lexiparse {
 
 			let right = this.parseExpressionWithPrecedence( code, pos, nextMinPrec );
 			if (!right) {
+				this.recursionDepth--;
 				throw `Expected right operand for operator '${operator.value}' at position ${pos}`;
 			}
 
@@ -316,6 +602,7 @@ class Lexiparse {
 			left.posAfter = pos;
 		}
 
+		this.recursionDepth--;
 		return left;
 	}
 
