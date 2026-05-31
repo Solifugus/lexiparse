@@ -141,6 +141,32 @@ if (success) {
 }
 ```
 
+### 🎯 **CoreDS - Instant Business Language**
+```javascript
+const { CoreDS } = require('./examples/coreds.js');
+
+// Create extensible business language foundation
+const coreDS = new CoreDS();
+
+// Built-in business functions ready to use
+console.log(coreDS.getStandardLibrary().calculate_tax(1000, 0.08));  // $80
+console.log(coreDS.getStandardLibrary().apply_discount(1000, 15));   // $850
+console.log(coreDS.getStandardLibrary().format_currency(1234.56));   // $1,234.56
+
+// Extend for your domain (Healthcare, Finance, Inventory, HR, etc.)
+coreDS.extend({
+    functions: {
+        calculate_copay: (serviceAmount, copayPercent, maxCopay) => 
+            Math.min(serviceAmount * (copayPercent / 100), maxCopay)
+    },
+    keywords: ['patient', 'claim', 'copay'],
+    module: { name: 'healthcare' }
+});
+
+// 21 functions built-in + unlimited extensibility
+console.log(`Available functions: ${coreDS.getAPI().totalFunctions}`);
+```
+
 ---
 
 ## 🎯 **Phase 4: Developer Experience Tools**
@@ -648,7 +674,10 @@ npm install
 # Run tests
 npm test
 
-# Test error handling demo
+# Try CoreDS - extensible business language foundation
+node examples/coreds.js
+
+# Test error handling demo  
 node examples/error_demo.js
 
 # Try the original Burp language example
@@ -664,6 +693,16 @@ node burp.js
 ---
 
 ## 📖 **Examples & Documentation**
+
+### ⭐ **CoreDS - Starter Language Foundation**
+- **`examples/coreds.js`** - **Core Domain Specific Language** 
+  - Clean, extensible foundation for any business domain
+  - Natural syntax with money, dates, percentages
+  - 21-function standard library (math, text, dates, validation, business)
+  - Powerful extension system for domain customization
+  - Ready to extend for Healthcare, Finance, Inventory, HR, etc.
+
+📚 **[Complete Tutorial: examples/CoreDS_Tutorial.md](examples/CoreDS_Tutorial.md)** - Comprehensive guide to building domain-specific languages with CoreDS, including step-by-step examples for E-commerce, HR/Payroll, and Finance domains.
 
 ### Sample Files
 - **`burp.js`** - Original simple language demonstration

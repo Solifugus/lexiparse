@@ -74,6 +74,8 @@ const testCategories = [
     {
         name: 'Examples & Demos',
         tests: [
+            'examples/coreds.js',
+            'examples/domain_extension_demo.js',
             'examples/bizscript_demo.js',
             'examples/error_demo.js'
         ]
