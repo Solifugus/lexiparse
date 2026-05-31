@@ -53,14 +53,14 @@ class Lexiparse {
 		return { lineNo:lineNo, charNo:1+pos-linePos, endOfLine:endOfLine };
 	}
 
-	// Find and Return Match of Segment (label), Starting at Code Position (pos) 
+	// Find and Return Match of Segment (label), Starting at Code Position (pos)
 	matchOption( code, pos, label, path = [] ) {
 		// Default return value (matched nothing)
 		var match = false;
 
 		// Skip any characters specified to ignore
 		while( this.option.ignore.indexOf(code[pos]) !== -1 ) pos += 1;
-	
+
 		// If we whitespaced past to the end of the program..
 		if( pos >= code.length ) {
 			this.finished = true;
@@ -84,12 +84,11 @@ class Lexiparse {
 
 			// If option is sub-segment (e.g. ':label')
 			if( typeof option === 'string' && option[0] === ':' ) {
-				// If not infinite recurse, seek option..
+				// Prevent infinite recursion within this option
 				if( path.indexOf(i) !== -1 ) { continue; } else { path.push(i); }
-				let result = this.matchOption( code, pos, option.substr(1), path );
+				let result = this.matchOption( code, pos, option.substr(1), path.slice() ); // Pass a copy
 				path.pop();
 				if( result !== false ) {
-					console.log('XXX ' + JSON.stringify(result)); // TODO: matchOption not always getting results to functions
 					match = result;
 					break;
 				}
@@ -113,22 +112,30 @@ class Lexiparse {
 				}
 			}
 
-			// if option is sequence 
+			// if option is sequence
 			if( Array.isArray( option ) ) {
-				// If not infinite recurse, seek sequence..
+				// Prevent infinite recursion within this option
 				if( path.indexOf(i) !== -1 ) { continue; } else { path.push(i); }
-				let result = this.matchSequence( code, pos, option, path );
+				let result = this.matchSequence( code, pos, option, path.slice() ); // Pass a copy
 				path.pop();
 				if( result !== false ) {
 					match = result;
 					break;
-				} 
+				}
 			}
 		} // end of loop through segment options
 
 		// If function at end of options, call it.
 		if( match !== false && typeof options[options.length-1] === 'function' ) {
-			options[options.length-1].bind(this.option.binding)(match);
+			try {
+				options[options.length-1].bind(this.option.binding)(match);
+			} catch (error) {
+				// Re-throw environmental errors (like TTY issues) as-is
+				if (error.code && (error.code === 'ENXIO' || error.code === 'ENOTTY')) {
+					throw error;
+				}
+				throw 'ERROR in Callback Function for "' + label + '": ' + error.message;
+			}
 		}
 
 		return match;
@@ -139,7 +146,9 @@ class Lexiparse {
 		var match = { type:'sequence', values:[], posAfter:pos };  // Findings holds each match in sequence
 
 		for( var i = 0; i < sequence.length; i += 1 ) {
-			if( i > 0 ) path = [];  // NOTE: crude but effective fix for 1+1+1 issue.
+			// Reset path tracking for subsequent elements to allow expressions like "1+1+1"
+			// This prevents path pollution from first element affecting later elements
+			if( i > 0 ) path = [];
 			let required = sequence[i];
 
 			// If process function then run (could be multiple in sequence -- is that useful?)
@@ -160,8 +169,8 @@ class Lexiparse {
 				}
 				else { isSubsegment = false; }
 
-				if( isSubsegment === true )  { 
-					result = this.matchOption( code, pos, required, path );
+				if( isSubsegment === true )  {
+					result = this.matchOption( code, pos, required, path.slice() ); // Pass a copy
 				}
 				if( isSubsegment === false ) result = this.matchLiteral( code, pos, required );
 			}
@@ -186,7 +195,17 @@ class Lexiparse {
         if (match !== false) {
             match.posAfter = pos;
             let handler = sequence[sequence.length - 1];
-            if (typeof handler === 'function') handler.bind(this.option.binding)(match);
+            if (typeof handler === 'function') {
+                try {
+                    handler.bind(this.option.binding)(match);
+                } catch (error) {
+                    // Re-throw environmental errors (like TTY issues) as-is
+                    if (error.code && (error.code === 'ENXIO' || error.code === 'ENOTTY')) {
+                        throw error;
+                    }
+                    throw 'ERROR in Sequence Callback: ' + error.message;
+                }
+            }
         }
 		return match;
 	} // end of matchSequence()
@@ -214,7 +233,7 @@ class Lexiparse {
         if ( result !== null ) {
             match = { found: result, posAfter: pos + result[0].length };
             match.type = 'regex';
-            match.value = result;
+            match.value = result[0];
         }
 		return match; 
 	}
