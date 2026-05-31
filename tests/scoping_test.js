@@ -1,6 +1,6 @@
 #!/usr/bin/nodejs
 
-var Lexiparse = require('./lexiparse.js');
+var Lexiparse = require('../lexiparse.js');
 
 // Grammar with enhanced variable handling
 let grammar = {

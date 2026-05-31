@@ -1,6 +1,6 @@
 #!/usr/bin/nodejs
 
-var Lexiparse = require('./lexiparse.js');
+var Lexiparse = require('../lexiparse.js');
 
 async function runExternalTests() {
 console.log('🧪 Testing External Function Call System\n');

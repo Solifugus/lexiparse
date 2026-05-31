@@ -1,6 +1,6 @@
 #!/usr/bin/nodejs
 
-var Lexiparse = require('./lexiparse.js');
+var Lexiparse = require('../lexiparse.js');
 
 // Enhanced BizScript grammar for testing Phase 2 arrays and objects
 let grammar = {

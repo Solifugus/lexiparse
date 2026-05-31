@@ -12,7 +12,7 @@
  * - Interactive REPL
  */
 
-const Lexiparse = require('./lexiparse.js');
+const Lexiparse = require('../lexiparse.js');
 
 console.log('🎯 Phase 4: Developer Experience Test Suite');
 console.log('='.repeat(60));

@@ -1,6 +1,6 @@
 #!/usr/bin/nodejs
 
-var Lexiparse = require('./lexiparse.js');
+var Lexiparse = require('../lexiparse.js');
 
 // Business-focused comprehensive test combining all Phase 2 features
 async function runComprehensivePhase2Tests() {

@@ -1,6 +1,6 @@
 #!/usr/bin/nodejs
 
-var Lexiparse = require('./lexiparse.js');
+var Lexiparse = require('../lexiparse.js');
 
 console.log('🏢 Enterprise Integration Test: Complete Lexiparse Business Platform\n');
 console.log('🎯 Demonstrating Phases 1, 2, and 3 working together in production\n');

@@ -1,6 +1,6 @@
 #!/usr/bin/nodejs
 
-var Lexiparse = require('./lexiparse.js');
+var Lexiparse = require('../lexiparse.js');
 
 // Enhanced BizScript grammar for testing error handling (without left recursion)
 let grammar = {
